@@ -1,0 +1,797 @@
+Ты — senior full-stack engineer и AI product architect. Построй полный MVP проекта Deep Compatibility Platform — AI-native платформы для поиска глубокой человеческой совместимости.
+
+════════════════════════════════════════════════════════════
+КОНТЕКСТ ПРОДУКТА
+════════════════════════════════════════════════════════════
+
+Это НЕ swipe-based dating app.
+Это психологическая платформа для поиска long-term совместимости.
+
+Система анализирует:
+- attachment style пользователя
+- emotional regulation паттерны
+- жизненные ценности
+- стиль конфликта
+- нервную систему (stress reactivity)
+- коммуникационные паттерны
+- long-term goals
+
+Matching происходит через 6-слойный compatibility framework,
+а не через внешность или поверхностные интересы.
+
+════════════════════════════════════════════════════════════
+ТЕХНИЧЕСКИЙ СТЕК
+════════════════════════════════════════════════════════════
+
+Frontend:
+- Next.js 14 (App Router)
+- TypeScript (strict mode)
+- Tailwind CSS
+- shadcn/ui как компонентная база
+- Zustand для client state
+- React Query (TanStack Query) для server state
+- Framer Motion для анимаций
+
+Backend:
+- Next.js API Routes (или отдельный Hono на Node.js — выбери сам что лучше для этой архитектуры)
+- Prisma ORM
+- PostgreSQL + pgvector extension
+- NextAuth.js для аутентификации
+- Zod для валидации
+- BullMQ + Redis для очередей (фоновые задачи)
+
+AI слой (ЗАГЛУШКИ):
+- Все AI-функции реализовать как stub-сервисы
+- Интерфейсы должны быть полностью готовы к подключению реального LLM
+- Промпты написать и сохранить в отдельных файлах
+- Подробнее — в разделе AI ниже
+
+════════════════════════════════════════════════════════════
+СТРУКТУРА ПРОЕКТА
+════════════════════════════════════════════════════════════
+
+Создай следующую файловую структуру:
+
+/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/page.tsx
+│   │   └── register/page.tsx
+│   ├── (onboarding)/
+│   │   ├── layout.tsx
+│   │   ├── welcome/page.tsx
+│   │   ├── session-1/page.tsx        ← образы и реакции
+│   │   ├── session-2/page.tsx        ← моральные дилеммы
+│   │   ├── session-3/page.tsx        ← жизненные трейдоффы
+│   │   ├── session-4/page.tsx        ← мини-истории
+│   │   ├── session-5/page.tsx        ← свободный разговор (AI stub)
+│   │   └── complete/page.tsx
+│   ├── (app)/
+│   │   ├── layout.tsx
+│   │   ├── dashboard/page.tsx
+│   │   ├── matches/page.tsx
+│   │   ├── matches/[id]/page.tsx
+│   │   ├── chat/[matchId]/page.tsx
+│   │   ├── profile/page.tsx
+│   │   └── insights/page.tsx
+│   └── api/
+│       ├── auth/[...nextauth]/route.ts
+│       ├── onboarding/
+│       │   ├── save-response/route.ts
+│       │   └── complete/route.ts
+│       ├── matches/
+│       │   ├── route.ts
+│       │   └── [id]/route.ts
+│       ├── chat/
+│       │   ├── [matchId]/messages/route.ts
+│       │   └── [matchId]/ai-suggestion/route.ts   ← AI stub
+│       ├── profile/
+│       │   └── route.ts
+│       └── ai/
+│           ├── infer-personality/route.ts          ← AI stub
+│           ├── compute-compatibility/route.ts      ← AI stub
+│           └── conversation-insight/route.ts       ← AI stub
+├── components/
+│   ├── onboarding/
+│   │   ├── ScenarioCard.tsx
+│   │   ├── DilemmaChoice.tsx
+│   │   ├── TradeoffSlider.tsx
+│   │   ├── MiniStory.tsx
+│   │   ├── ProgressBar.tsx
+│   │   └── InsightReveal.tsx
+│   ├── matches/
+│   │   ├── MatchCard.tsx
+│   │   ├── CompatibilityRadar.tsx
+│   │   ├── LayerBreakdown.tsx
+│   │   └── TensionAlert.tsx
+│   ├── chat/
+│   │   ├── MessageBubble.tsx
+│   │   ├── AISuggestion.tsx
+│   │   └── ConversationDepthIndicator.tsx
+│   ├── profile/
+│   │   ├── PersonalityVector.tsx
+│   │   └── AttachmentStyleCard.tsx
+│   └── ui/
+│       └── ... (shadcn компоненты)
+├── lib/
+│   ├── ai/
+│   │   ├── index.ts                   ← главный AI service
+│   │   ├── stubs.ts                   ← все заглушки
+│   │   ├── interfaces.ts              ← TypeScript интерфейсы
+│   │   └── prompts/
+│   │       ├── personality-inference.ts
+│   │       ├── compatibility-analysis.ts
+│   │       ├── conversation-assistant.ts
+│   │       └── safety-moderation.ts
+│   ├── matching/
+│   │   ├── engine.ts                  ← matching algorithm
+│   │   ├── scorer.ts                  ← compatibility scorer
+│   │   ├── conflict-detector.ts
+│   │   └── vector-search.ts           ← pgvector queries
+│   ├── db/
+│   │   └── index.ts                   ← Prisma client singleton
+│   └── utils/
+│       ├── compatibility.ts
+│       └── personality.ts
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+├── types/
+│   └── index.ts
+└── config/
+    └── onboarding-content.ts          ← весь контент онбординга
+
+════════════════════════════════════════════════════════════
+БАЗА ДАННЫХ — ПОЛНАЯ SCHEMA PRISMA
+════════════════════════════════════════════════════════════
+
+Реализуй следующую schema в prisma/schema.prisma:
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  avatarUrl         String?
+  createdAt         DateTime  @default(now())
+  deletedAt         DateTime?
+  onboardingDone    Boolean   @default(false)
+  onboardingStep    Int       @default(0)
+
+  profile           Profile?
+  behavioralEvents  BehavioralEvent[]
+  matchesAsA        Match[]   @relation("MatchUserA")
+  matchesAsB        Match[]   @relation("MatchUserB")
+  sentMessages      Message[]
+  accounts          Account[]
+  sessions          Session[]
+}
+
+model Profile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id])
+
+  // Personality vector (128-dim, хранится как float array)
+  personalityVector     Float[]
+
+  // Attachment style scores (сумма = 1.0)
+  attachmentSecure      Float     @default(0)
+  attachmentAnxious     Float     @default(0)
+  attachmentAvoidant    Float     @default(0)
+  attachmentDisorganized Float    @default(0)
+
+  // Values map (12 dimensions, each 0-1)
+  valuesAutonomy        Float     @default(0)
+  valuesSecurity        Float     @default(0)
+  valuesAchievement     Float     @default(0)
+  valuesBenevolence     Float     @default(0)
+  valuesConformity      Float     @default(0)
+  valuesTradition       Float     @default(0)
+  valuesPower           Float     @default(0)
+  valuesStimulation     Float     @default(0)
+  valuesHedonism        Float     @default(0)
+  valuesUniversalism    Float     @default(0)
+  valuesSelfDirection   Float     @default(0)
+  valuesSpirit          Float     @default(0)
+
+  // Conflict style
+  conflictCompete       Float     @default(0)
+  conflictAvoid         Float     @default(0)
+  conflictAccommodate   Float     @default(0)
+  conflictCollaborate   Float     @default(0)
+
+  // Nervous system
+  nervousActivation     Float     @default(0)
+  nervousDeactivation   Float     @default(0)
+  nervousWindowTolerance Float    @default(0)
+
+  // Emotional regulation
+  emotionFlooding       Float     @default(0)
+  emotionRumination     Float     @default(0)
+  emotionRepair         Float     @default(0)
+  emotionSuppression    Float     @default(0)
+  emotionExpression     Float     @default(0)
+
+  // Growth
+  growthFixed           Float     @default(0)
+  growthOriented        Float     @default(0)
+
+  // Communication
+  commDirect            Float     @default(0)
+  commIndirect          Float     @default(0)
+  commAssertive         Float     @default(0)
+  commPassive           Float     @default(0)
+
+  // Confidence scores per dimension
+  confidenceScores      Json      @default("{}")
+
+  // AI-generated insights (хранить как JSON)
+  personalityInsights   Json?
+  rawOnboardingData     Json?
+
+  lastInferredAt        DateTime?
+  updatedAt             DateTime  @updatedAt
+}
+
+model BehavioralEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  eventType   String    // 'onboarding_choice', 'message_sent', 'match_viewed', etc.
+  sessionNum  Int?
+  questionId  String?
+  choiceValue Json      // НЕ raw text — только metadata
+  timingMs    Int?      // время ответа в миллисекундах
+  createdAt   DateTime  @default(now())
+}
+
+model Match {
+  id          String    @id @default(cuid())
+  userA       User      @relation("MatchUserA", fields: [userAId], references: [id])
+  userAId     String
+  userB       User      @relation("MatchUserB", fields: [userBId], references: [id])
+  userBId     String
+
+  // Compatibility breakdown
+  layerScores           Json      // {nervous: 0.8, attachment: 0.6, values: 0.9, ...}
+  overallScore          Float
+  chemistryScore        Float
+  stabilityScore        Float
+  tensionPoints         Json?     // predicted conflict areas
+  resonancePoints       Json?     // predicted connection areas
+  confidenceScore       Float     @default(0)
+
+  // Status
+  outcome               String?   // null | 'connected' | 'declined' | 'ghosted' | 'relationship'
+  shownToA              Boolean   @default(false)
+  shownToB              Boolean   @default(false)
+  shownAt               DateTime?
+
+  messages              Message[]
+  computedAt            DateTime  @default(now())
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  matchId     String
+  match       Match     @relation(fields: [matchId], references: [id])
+  senderId    String
+  sender      User      @relation(fields: [senderId], references: [id])
+  content     String    // в реальности — E2E encrypted
+  messageType String    @default("user") // 'user' | 'ai_suggestion' | 'system'
+  metadata    Json?     // для AI сообщений — какой prompt использовался
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+}
+
+// NextAuth models
+model Account { ... стандартные NextAuth поля ... }
+model Session { ... стандартные NextAuth поля ... }
+
+════════════════════════════════════════════════════════════
+AI СЛОЙ — ДЕТАЛЬНАЯ АРХИТЕКТУРА ЗАГЛУШЕК
+════════════════════════════════════════════════════════════
+
+Это самая важная часть архитектуры. Реализуй так, чтобы
+подключение реального LLM требовало изменений только в одном месте.
+
+──────────────────────────────────────────────
+lib/ai/interfaces.ts
+──────────────────────────────────────────────
+
+Определи следующие TypeScript интерфейсы:
+
+interface AIPersonalityInferenceInput {
+  userId: string
+  onboardingResponses: OnboardingResponse[]
+  behavioralEvents: BehavioralEventData[]
+  freeTextResponses: string[]
+}
+
+interface AIPersonalityInferenceOutput {
+  personalityVector: number[]           // 128-dim
+  attachmentScores: AttachmentScores
+  valuesMap: ValuesMap
+  conflictStyle: ConflictStyle
+  nervousSystem: NervousSystemProfile
+  emotionalRegulation: EmotionalRegulation
+  growthOrientation: GrowthOrientation
+  communication: CommunicationStyle
+  confidenceScores: Record<string, number>
+  narrativeInsight: string              // human-readable summary
+  uncertaintyFlags: string[]            // что система не уверена
+}
+
+interface AICompatibilityInput {
+  profileA: PersonalityProfile
+  profileB: PersonalityProfile
+}
+
+interface AICompatibilityOutput {
+  layerScores: LayerScores
+  overallScore: number
+  chemistryScore: number
+  stabilityScore: number
+  tensionPoints: TensionPoint[]
+  resonancePoints: ResonancePoint[]
+  narrativeSummary: string
+  warningFlags: string[]
+  confidenceScore: number
+}
+
+interface AIConversationInput {
+  matchId: string
+  profileA: PersonalityProfile
+  profileB: PersonalityProfile
+  compatibilityData: AICompatibilityOutput
+  conversationHistory: MessageData[]
+  requestType: 'starter' | 'deepen' | 'insight' | 'repair'
+}
+
+interface AIConversationOutput {
+  suggestion: string
+  suggestionType: 'question' | 'observation' | 'challenge'
+  depthLevel: 1 | 2 | 3          // 1=light, 2=medium, 3=vulnerable
+  reasoning: string               // почему именно это предложение
+}
+
+interface AISafetyInput {
+  content: string
+  userId: string
+  context: 'message' | 'onboarding' | 'profile'
+}
+
+interface AISafetyOutput {
+  isSafe: boolean
+  flags: SafetyFlag[]
+  distressSignals: boolean
+  requiresHumanReview: boolean
+}
+
+──────────────────────────────────────────────
+lib/ai/stubs.ts
+──────────────────────────────────────────────
+
+Реализуй все AI функции как стабы, которые:
+1. Принимают правильные input типы
+2. Возвращают правильные output типы
+3. Возвращают реалистичные mock данные (не пустые объекты)
+4. Логируют: "AI STUB: [function_name] called with [input summary]"
+5. Имитируют async задержку 800-1500ms (Math.random)
+6. Помечены комментарием: // TODO: Replace with real LLM call
+
+Пример для inferPersonality:
+export async function inferPersonality(
+  input: AIPersonalityInferenceInput
+): Promise<AIPersonalityInferenceOutput> {
+  console.log(`AI STUB: inferPersonality called for user ${input.userId}`)
+  await simulateLatency()
+  // TODO: Replace with real LLM call using PERSONALITY_INFERENCE_PROMPT
+  return {
+    personalityVector: generateRandomVector(128),
+    attachmentScores: {
+      secure: 0.6,
+      anxious: 0.25,
+      avoidant: 0.1,
+      disorganized: 0.05
+    },
+    ... остальные mock значения ...
+    narrativeInsight: "На основе ваших ответов прослеживается паттерн...",
+    uncertaintyFlags: ["attachment_style needs more data"]
+  }
+}
+
+──────────────────────────────────────────────
+lib/ai/prompts/ — РЕАЛЬНЫЕ ПРОМПТЫ
+──────────────────────────────────────────────
+
+Напиши полноценные промпты, готовые к использованию с реальным LLM.
+
+personality-inference.ts:
+export const PERSONALITY_INFERENCE_PROMPT = `
+Ты — психологический аналитик, специализирующийся на поведенческих паттернах
+и теории привязанности. Твоя задача — извлечь психологический профиль
+из поведенческих данных пользователя.
+
+ВАЖНЫЕ ОГРАНИЧЕНИЯ:
+- Никогда не ставь диагнозы
+- Все выводы выражай как вероятностные тенденции
+- Явно указывай, что остаётся неопределённым
+- Не используй клиническую терминологию в output для пользователя
+- Не inferить: trauma history, mental illness, sexual orientation
+
+INPUT: {{ONBOARDING_DATA}}
+
+OUTPUT FORMAT (строго JSON):
+{
+  "attachmentScores": { ... },
+  "valuesMap": { ... },
+  "conflictStyle": { ... },
+  "nervousSystem": { ... },
+  "emotionalRegulation": { ... },
+  "growthOrientation": { ... },
+  "communication": { ... },
+  "confidenceScores": { ... },
+  "narrativeInsight": "...", // max 3 предложения, без jargon
+  "uncertaintyFlags": ["..."]
+}
+`
+
+compatibility-analysis.ts:
+export const COMPATIBILITY_ANALYSIS_PROMPT = `
+Ты анализируешь психологическую совместимость двух людей.
+
+ВАЖНО:
+- Не давай общий процент совместимости как единственную цифру
+- Честно называй зоны потенциального конфликта
+- Объясняй механику, не только результат
+- Не говори что пара "идеальная"
+- Uncertainty > false confidence
+
+ПРОФИЛЬ A: {{PROFILE_A}}
+ПРОФИЛЬ B: {{PROFILE_B}}
+
+OUTPUT FORMAT (строго JSON):
+{
+  "layerScores": {
+    "nervous": 0.0-1.0,
+    "attachment": 0.0-1.0,
+    "values": 0.0-1.0,
+    "emotionalRegulation": 0.0-1.0,
+    "lifestyle": 0.0-1.0,
+    "growth": 0.0-1.0
+  },
+  "chemistryScore": 0.0-1.0,
+  "stabilityScore": 0.0-1.0,
+  "tensionPoints": [
+    {
+      "dimension": "attachment",
+      "severity": "low|medium|high",
+      "description": "...",
+      "patternName": "anxious-avoidant dynamic"
+    }
+  ],
+  "resonancePoints": [ ... ],
+  "narrativeSummary": "...",
+  "warningFlags": ["..."],
+  "confidenceScore": 0.0-1.0
+}
+`
+
+conversation-assistant.ts — аналогично, полный промпт
+
+safety-moderation.ts — аналогично, полный промпт
+
+──────────────────────────────────────────────
+lib/ai/index.ts — главный сервис
+──────────────────────────────────────────────
+
+export class AIService {
+  private useStubs: boolean
+
+  constructor() {
+    // Когда AI подключат — просто поменять переменную
+    this.useStubs = process.env.AI_USE_STUBS !== 'false'
+  }
+
+  async inferPersonality(input) { ... }
+  async computeCompatibility(input) { ... }
+  async getConversationSuggestion(input) { ... }
+  async moderateContent(input) { ... }
+}
+
+export const aiService = new AIService()
+
+════════════════════════════════════════════════════════════
+MATCHING ENGINE
+════════════════════════════════════════════════════════════
+
+lib/matching/engine.ts
+
+Реализуй MatchingEngine класс со следующей логикой:
+
+async findMatches(userId: string): Promise<Match[]>
+
+Алгоритм:
+1. Загрузи профиль пользователя из БД
+2. Vector similarity search через pgvector:
+   SELECT * FROM profiles
+   ORDER BY personality_vector <=> $1
+   LIMIT 200
+   (реализуй через Prisma $queryRaw)
+3. Прогони через ConflictDetector — отфильтруй hard incompatibilities
+4. Для топ-50 запусти aiService.computeCompatibility()
+5. Примени chemistry boost для complementary patterns
+6. Примени uncertainty dampening для неполных профилей
+7. Верни топ-7 с полным breakdown
+
+lib/matching/scorer.ts
+
+Реализуй WeightedScorer:
+
+const LAYER_WEIGHTS = {
+  nervous:           0.20,  // сильнейший predictor
+  attachment:        0.25,  // сильнейший predictor
+  values:            0.20,
+  emotionalRegulation: 0.15,
+  lifestyle:         0.10,
+  growth:            0.10,
+}
+
+// Веса динамически корректируются на основе onboardingStep пользователя
+// Чем полнее профиль — тем точнее веса
+
+lib/matching/conflict-detector.ts
+
+Реализуй ConflictDetector.detect(profileA, profileB):
+Возвращает { hasHardConflict: boolean, conflicts: ConflictData[] }
+
+Hard conflicts (фильтровать полностью):
+- Оба имеют extreme avoidant > 0.8 (взаимное избегание)
+- Values polar opposites на критических dimensions (diff > 0.85)
+
+Soft conflicts (передавать в tensionPoints):
+- anxious + avoidant pattern
+- Opposite conflict styles (compete + accommodate)
+- Разные growth orientations
+
+════════════════════════════════════════════════════════════
+ОНБОРДИНГ — ПОЛНЫЙ КОНТЕНТ
+════════════════════════════════════════════════════════════
+
+config/onboarding-content.ts
+
+Напиши РЕАЛЬНЫЙ контент для всех 4 сессий (не placeholder).
+
+Сессия 1 — 5 сценарных вопросов. Пример формата:
+{
+  id: "s1_q1",
+  type: "scenario",
+  prompt: "Представь: пятница вечер, ты только вернулся с тяжёлой недели. Никаких обязательств. Что ты выберешь?",
+  options: [
+    { id: "a", text: "Позвоню другу — хочу поговорить", signal: { social: 1.0, activation: 0.8 } },
+    { id: "b", text: "Включу любимый сериал в тишине", signal: { deactivation: 0.9, introvert: 0.8 } },
+    { id: "c", text: "Пойду на тренировку или прогулку", signal: { somatic: 1.0, activation: 0.7 } },
+    { id: "d", text: "Залипну в телефон, чтобы не думать", signal: { avoidance: 0.9, suppression: 0.8 } }
+  ]
+}
+
+Сессия 2 — 4 моральные дилеммы. Реальные, без правильных ответов.
+Сессия 3 — 5 трейдоффов (slider или binary choice).
+Сессия 4 — 3 мини-истории с разветвлением.
+
+Каждый вопрос должен иметь signal weights — это то, как ответы
+влияют на personality vector. Документируй логику.
+
+════════════════════════════════════════════════════════════
+КЛЮЧЕВЫЕ UI КОМПОНЕНТЫ
+════════════════════════════════════════════════════════════
+
+components/matches/CompatibilityRadar.tsx
+- Radar chart (recharts) с 6 слоями совместимости
+- Показывает и профиль A и профиль B на одном графе
+- Зоны пересечения = резонанс, расхождения = потенциальный конфликт
+
+components/matches/LayerBreakdown.tsx
+- Детальный breakdown по каждому из 6 слоёв
+- Для каждого слоя: score + narrative explanation
+- TensionAlert если есть tension points
+
+components/chat/AISuggestion.tsx
+- Карточка с AI-предложением вопроса/темы
+- Показывает depth level (1/2/3)
+- Пользователь может: использовать / скрыть / попросить другое
+- Все запросы идут в /api/chat/[matchId]/ai-suggestion (stub)
+
+components/onboarding/InsightReveal.tsx
+- Анимированный reveal после каждой сессии
+- Показывает 1-2 предложения инсайта об ответах
+- Формулировка: "Мы заметили, что..." — не "Ты являешься..."
+- Есть кнопка "Это резонирует" / "Не совсем точно"
+
+════════════════════════════════════════════════════════════
+API ROUTES — ПОЛНАЯ РЕАЛИЗАЦИЯ
+════════════════════════════════════════════════════════════
+
+Все роуты должны:
+- Валидировать input через Zod схемы
+- Возвращать типизированные ответы
+- Обрабатывать ошибки с правильными HTTP кодами
+- Проверять авторизацию
+
+/api/onboarding/save-response
+POST { sessionNum, questionId, choiceValue, timingMs }
+- Сохраняет BehavioralEvent
+- Обновляет onboardingStep пользователя
+- После последней сессии — ставит в очередь inferPersonality job
+
+/api/onboarding/complete
+POST {}
+- Запускает aiService.inferPersonality() (или ставит в очередь)
+- Обновляет Profile в БД
+- Запускает начальный matching run
+- Возвращает первые insights
+
+/api/matches
+GET
+- Возвращает матчи пользователя с compatibility data
+- Lazy-load personality inference если ещё не готова
+
+/api/matches/[id]
+GET
+- Полный compatibility breakdown
+- TensionPoints и ResonancePoints
+- Narrative summaries
+
+/api/chat/[matchId]/ai-suggestion
+POST { requestType: 'starter' | 'deepen' | 'insight' | 'repair' }
+- Вызывает aiService.getConversationSuggestion() (stub)
+- Возвращает suggestion с depth level
+
+/api/ai/infer-personality (admin/debug endpoint)
+POST { userId }
+- Запускает personality inference вручную
+- Только в development
+
+════════════════════════════════════════════════════════════
+ДИЗАЙН СИСТЕМА
+════════════════════════════════════════════════════════════
+
+Цветовая палитра (tailwind config):
+- Primary: глубокий сине-зелёный (#0F6E56 или похожий)
+- Background: очень светлый тёплый (#FAFAF8)
+- Surface: белый с тёплым оттенком
+- Accent: приглушённый терракотовый
+- Text primary: почти чёрный (#1A1A1A)
+- Text secondary: тёплый серый
+
+Ощущение:
+- Спокойное, умное, premium
+- НЕ яркое, НЕ игривое
+- Похоже на хорошее медицинское или психологическое приложение
+- Generous whitespace
+- Subtle animations (Framer Motion, не агрессивные)
+
+Типографика:
+- Headings: что-то с характером (Playfair Display или похожее через next/font)
+- Body: системный или Inter
+- Акцент на читаемости, не на декоративности
+
+════════════════════════════════════════════════════════════
+SEED DATA
+════════════════════════════════════════════════════════════
+
+prisma/seed.ts
+
+Создай 20 seed пользователей с:
+- Полностью заполненными Profile (все float поля)
+- Разными attachment styles (распредели реалистично:
+  secure 50%, anxious 20%, avoidant 20%, mixed 10%)
+- Несколькими pre-computed Match парами
+- Историей сообщений для 2-3 пар (для тестирования chat)
+
+Один специальный пользователь:
+email: demo@demo.com
+password: demo123
+— с полным профилем и 3 матчами для демо
+
+════════════════════════════════════════════════════════════
+ENVIRONMENT VARIABLES
+════════════════════════════════════════════════════════════
+
+Создай .env.example с:
+DATABASE_URL="postgresql://..."
+NEXTAUTH_SECRET="..."
+NEXTAUTH_URL="http://localhost:3000"
+REDIS_URL="redis://localhost:6379"
+
+# AI Configuration — заполнить когда будет подключать LLM
+AI_USE_STUBS="true"                    # поменять на false для реального AI
+AI_PROVIDER="anthropic"                # anthropic | openai
+AI_MODEL="claude-opus-4-5"            # конкретная модель
+AI_API_KEY=""                          # пока пусто
+AI_MAX_TOKENS="2000"
+AI_TEMPERATURE="0.3"                   # низкая для consistency
+
+════════════════════════════════════════════════════════════
+ДОКУМЕНТАЦИЯ
+════════════════════════════════════════════════════════════
+
+Создай следующие файлы документации:
+
+README.md:
+- Что это за проект (2 абзаца)
+- Быстрый старт (команды)
+- Структура проекта
+- Как работает AI слой и где заглушки
+
+docs/AI_INTEGRATION.md:
+- Полная инструкция как подключить реальный LLM
+- Какие переменные поменять
+- Какие файлы изменить (только lib/ai/index.ts)
+- Пример реализации для Anthropic Claude
+- Пример реализации для OpenAI
+
+docs/MATCHING_ALGORITHM.md:
+- Как работает matching engine
+- Описание 6 слоёв совместимости
+- Как интерпретировать compatibility scores
+- Как работают conflict detectors
+
+docs/ONBOARDING_CONTENT.md:
+- Психологическая логика каждой сессии
+- Как signal weights влияют на personality vector
+- Как расширять онбординг контент
+
+════════════════════════════════════════════════════════════
+ПОРЯДОК ВЫПОЛНЕНИЯ
+════════════════════════════════════════════════════════════
+
+Выполняй строго в этом порядке:
+
+1. Инициализация проекта (Next.js, зависимости, конфиг)
+2. Prisma schema + миграция + seed
+3. NextAuth настройка
+4. lib/ai/ — интерфейсы, промпты, стабы, сервис
+5. lib/matching/ — engine, scorer, conflict detector, vector search
+6. config/onboarding-content.ts — реальный контент
+7. API routes (все)
+8. UI компоненты (снизу вверх: атомарные → сложные)
+9. Страницы (онбординг → matches → chat → profile)
+10. Seed data
+11. Документация
+
+════════════════════════════════════════════════════════════
+КРИТИЧЕСКИЕ ТРЕБОВАНИЯ
+════════════════════════════════════════════════════════════
+
+1. TypeScript strict mode везде. Никаких any.
+
+2. Все AI вызовы ТОЛЬКО через aiService из lib/ai/index.ts.
+   Никаких прямых вызовов в компонентах или API routes.
+
+3. Personality data и PII хранятся в разных таблицах.
+   Profile не содержит email/name. User не содержит psychological data.
+
+4. Система никогда не показывает пользователю:
+   - Единый процент совместимости
+   - Personality type labels ("ты — INTJ")
+   - Клинические термины (attachment disorder, etc.)
+   Только паттерны и тенденции с uncertainty.
+
+5. Onboarding questions должны быть РЕАЛЬНЫМИ —
+   не placeholder типа "Question 1". Психологически продуманными.
+
+6. AI стабы должны возвращать разные значения для разных inputs
+   (детерминированный hash от userId, не полный random).
+   Это важно для тестирования UI.
+
+7. Весь matching алгоритм должен быть полностью работоспособен
+   на stub данных — конец-в-конец от onboarding до chat.
+
+8. Никакой зависимости от внешних AI API в runtime.
+   Проект должен полностью работать с AI_USE_STUBS=true.
+
+Начни с создания структуры проекта и установки зависимостей.
