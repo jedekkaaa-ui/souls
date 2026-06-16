@@ -50,3 +50,5 @@ next-env.d.ts
 *.png
 debug_reg.js
 verify_onboarding.js
+
+.vercel
