@@ -9,7 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient(): PrismaClient {
   if (process.env.NODE_ENV === 'production') {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+    // Supabase Supavisor pooler uses a self-signed cert chain — strip sslmode and disable cert verification
+    const rawUrl = process.env.DATABASE_URL ?? ''
+    const cleanUrl = rawUrl.replace(/[?&]sslmode=[^&]*/g, '').replace(/[?&]$/, '')
+    const pool = new Pool({ connectionString: cleanUrl, ssl: { rejectUnauthorized: false } })
     const adapter = new PrismaPg(pool)
     return new PrismaClient({ adapter, log: ['error'] })
   }
