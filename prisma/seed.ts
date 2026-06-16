@@ -1,9 +1,22 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import bcrypt from 'bcryptjs'
 
-const adapter = new PrismaBetterSqlite3({ url: 'file:./dev.db' })
-const prisma = new PrismaClient({ adapter })
+function createClient() {
+  const url = process.env.DATABASE_URL ?? ''
+  if (url.startsWith('postgres')) {
+    // Seed script only — disable cert verification for Supabase pooler self-signed chain
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+    const { PrismaPg } = require('@prisma/adapter-pg')
+    const { Pool } = require('pg')
+    const cleanUrl = url.replace(/[?&]sslmode=[^&]*/g, '').replace(/[?&]$/, '')
+    const pool = new Pool({ connectionString: cleanUrl, ssl: { rejectUnauthorized: false } })
+    return new PrismaClient({ adapter: new PrismaPg(pool) })
+  }
+  const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
+  return new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: 'dev.db' }) })
+}
+
+const prisma = createClient()
 
 function seededFloat(seed: number, index: number): number {
   const x = Math.sin(seed + index) * 10000
